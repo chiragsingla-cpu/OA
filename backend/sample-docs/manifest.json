@@ -1,0 +1,7 @@
+[
+    { "file": "leave-policy.md", "title": "Leave Policy", "category": "hr_policy", "allowed_roles": ["employee"] },
+    { "file": "employee-handbook.md", "title": "Employee Handbook", "category": "handbook", "allowed_roles": ["employee"] },
+    { "file": "day1-week1-checklist.md", "title": "Day-1 & Week-1 Onboarding Checklist", "category": "checklist", "allowed_roles": ["employee"] },
+    { "file": "brd-employee-portal.md", "title": "BRD: Employee Self-Service Portal", "category": "brd", "allowed_roles": ["employee"] },
+    { "file": "hr-salary-bands.md", "title": "HR Internal: Salary Bands 2026", "category": "hr_policy", "allowed_roles": ["admin"] }
+]

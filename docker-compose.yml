@@ -1,0 +1,76 @@
+# Local development stack: runs frontend, Laravel API, AI service and MongoDB together.
+# Each app has its own Dockerfile, so it can also be deployed separately.
+services:
+  mongo:
+    # Atlas Local image: a normal MongoDB plus Atlas Search / $vectorSearch support.
+    image: mongodb/mongodb-atlas-local:latest
+    hostname: mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+      - mongo_config:/data/configdb
+
+  ai-service:
+    build: ./backend/ai-service
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8001 --reload
+    environment:
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      ANTHROPIC_MODEL: ${ANTHROPIC_MODEL:-claude-haiku-4-5}
+      AI_INTERNAL_KEY: ${AI_INTERNAL_KEY}
+      MONGODB_URI: mongodb://mongo:27017/?directConnection=true
+      MONGODB_DB: ${MONGODB_DB:-onboarding_assistant}
+      EMBEDDING_CACHE_DIR: /models
+    volumes:
+      - ./backend/ai-service/app:/app/app
+      - ./backend/ai-service/tests:/app/tests
+      - fastembed_cache:/models
+    ports:
+      - "8001:8001" # exposed for debugging only; the browser never calls this service
+    depends_on:
+      mongo:
+        condition: service_healthy
+
+  backend:
+    build: ./backend/api
+    # --no-reload lets PHP_CLI_SERVER_WORKERS run several workers, so one slow chat call doesn't block other requests.
+    command: php artisan serve --host=0.0.0.0 --port=8000 --no-reload
+    environment:
+      DB_CONNECTION: mongodb
+      MONGODB_URI: mongodb://mongo:27017/?directConnection=true
+      MONGODB_DB: ${MONGODB_DB:-onboarding_assistant}
+      AI_SERVICE_URL: http://ai-service:8001
+      AI_INTERNAL_KEY: ${AI_INTERNAL_KEY}
+      FRONTEND_URL: http://localhost:5173
+      SAMPLE_DOCS_PATH: /var/www/sample-docs
+      PHP_CLI_SERVER_WORKERS: 4
+    volumes:
+      - ./backend/api:/var/www/html
+      - ./backend/sample-docs:/var/www/sample-docs:ro
+    ports:
+      - "8000:8000"
+    depends_on:
+      mongo:
+        condition: service_healthy
+      ai-service:
+        condition: service_started
+
+  frontend:
+    build:
+      context: ./frontend
+      target: dev
+    environment:
+      VITE_API_URL: http://localhost:8000/api
+      VITE_USE_POLLING: "true" # file watching through Windows bind mounts
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    ports:
+      - "5173:5173"
+    depends_on:
+      - backend
+
+volumes:
+  mongo_data:
+  mongo_config:
+  fastembed_cache:

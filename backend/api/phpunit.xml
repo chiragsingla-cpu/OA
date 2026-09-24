@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:noNamespaceSchemaLocation="vendor/phpunit/phpunit/phpunit.xsd"
+         bootstrap="vendor/autoload.php"
+         colors="true">
+    <testsuites>
+        <testsuite name="Feature">
+            <directory>tests/Feature</directory>
+        </testsuite>
+    </testsuites>
+    <source>
+        <include>
+            <directory>app</directory>
+        </include>
+    </source>
+    <php>
+        <env name="APP_ENV" value="testing"/>
+        <env name="BCRYPT_ROUNDS" value="4"/>
+        <env name="CACHE_STORE" value="array"/>
+        <env name="SESSION_DRIVER" value="array"/>
+        <env name="QUEUE_CONNECTION" value="sync"/>
+        <!-- Tests use a separate database that is wiped before each test.
+             Set as <server> too: Laravel reads $_SERVER first, where Docker's real values live. -->
+        <env name="MONGODB_DB" value="onboarding_assistant_test" force="true"/>
+        <env name="AI_SERVICE_URL" value="http://ai-service.test" force="true"/>
+        <env name="AI_INTERNAL_KEY" value="test-key" force="true"/>
+        <server name="MONGODB_DB" value="onboarding_assistant_test"/>
+        <server name="AI_SERVICE_URL" value="http://ai-service.test"/>
+        <server name="AI_INTERNAL_KEY" value="test-key"/>
+    </php>
+</phpunit>
