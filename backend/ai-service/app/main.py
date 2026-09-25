@@ -12,7 +12,7 @@ from pydantic import BaseModel, Field
 from app import vectorstore
 from app.config import settings
 from app.graph import run_chat
-from app.ingest import EmptyDocument, UnsupportedFileType, extract_text, ingest_document
+from app.ingest import EmptyDocument, UnreadableDocument, UnsupportedFileType, extract_text, ingest_document
 from app.llm import LLMUnavailable
 
 logging.basicConfig(level=logging.INFO)
@@ -98,7 +98,7 @@ def ingest(
         chunk_count = ingest_document(document_id, title, category, roles, content)
     except UnsupportedFileType as error:
         raise HTTPException(status_code=415, detail=str(error)) from error
-    except EmptyDocument as error:
+    except (EmptyDocument, UnreadableDocument) as error:
         raise HTTPException(status_code=422, detail=str(error)) from error
 
     return {"document_id": document_id, "chunks": chunk_count, "text": content}

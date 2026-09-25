@@ -24,7 +24,12 @@ export default function DocumentRow({
 }) {
   return (
     <tr className="hover:bg-subtle">
-      <td className={`${td} font-semibold`}>{document.title}</td>
+      <td className={td}>
+        <span className="font-semibold">{document.title}</span>
+        {document.status === 'failed' && document.error && (
+          <p className="mt-0.5 max-w-md text-xs text-danger">{document.error}</p>
+        )}
+      </td>
       <td className={`${td} font-mono text-xs text-muted`}>{document.original_filename ?? '—'}</td>
       <td className={td}>{CATEGORY_LABELS[document.category]}</td>
       <td className={`${td} capitalize`}>{document.allowed_roles.join(', ')}</td>

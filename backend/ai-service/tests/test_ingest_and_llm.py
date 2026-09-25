@@ -1,7 +1,10 @@
+import io
+
 import pytest
+from pypdf import PdfWriter
 
 from app import llm
-from app.ingest import UnsupportedFileType, chunk_text, extract_text
+from app.ingest import UnreadableDocument, UnsupportedFileType, chunk_text, extract_text
 
 
 def test_extract_text_from_markdown():
@@ -11,6 +14,30 @@ def test_extract_text_from_markdown():
 def test_extract_text_rejects_unknown_types():
     with pytest.raises(UnsupportedFileType):
         extract_text("image.png", b"\x89PNG")
+
+
+@pytest.mark.parametrize("filename", ["broken.pdf", "broken.docx"])
+def test_damaged_files_raise_a_readable_error(filename):
+    with pytest.raises(UnreadableDocument, match="damaged"):
+        extract_text(filename, b"this is not really a " + filename.encode())
+
+
+def _encrypted_pdf(user_password: str) -> bytes:
+    writer = PdfWriter()
+    writer.add_blank_page(width=200, height=200)
+    writer.encrypt(user_password=user_password, owner_password="owner-secret")
+    buffer = io.BytesIO()
+    writer.write(buffer)
+    return buffer.getvalue()
+
+
+def test_password_protected_pdf_asks_for_the_password_to_be_removed():
+    with pytest.raises(UnreadableDocument, match="password-protected"):
+        extract_text("locked.pdf", _encrypted_pdf(user_password="open-me"))
+
+
+def test_pdf_locked_only_against_editing_is_still_read():
+    assert extract_text("edit-locked.pdf", _encrypted_pdf(user_password="")) == ""
 
 
 def test_chunk_text_splits_long_documents_and_drops_blanks():

@@ -18,9 +18,13 @@ Pick exactly one category for the latest question:
 - onboarding: joining the company, first day or first week, checklists, accounts and equipment setup, \
 who to contact as a new joiner.
 - general_docs: company policies, handbook topics, benefits, leave rules, working hours, processes, \
-projects and BRDs, or anything else that could be answered from company documents.
-- account_specific: questions about the asker's own personal records that need a lookup in a personal \
-system, such as their own salary, remaining leave balance, payslip or performance rating.
+projects and BRDs, or anything else that could be answered from company documents. This includes rules \
+and entitlements that apply to everyone even when asked in the first person, such as "How many leave \
+days do I get?", "Am I eligible to work from home?" or "What is my notice period?".
+- account_specific: only questions whose answer is a value that differs per person and needs a lookup \
+in a personal system, such as "How many leave days do I have left?", "What is my salary?", "Show my \
+payslip" or "What was my performance rating?". If unsure between general_docs and account_specific, \
+choose general_docs.
 - out_of_scope: clearly unrelated to the company or to work (weather, sports, trivia, jokes, general \
 coding help).
 
