@@ -13,20 +13,21 @@ export default function AdminDashboard() {
   const [tab, setTab] = useState<Tab>('documents')
 
   return (
-    <Layout>
-      <h1 className="text-2xl font-semibold">Admin</h1>
-      <p className="mb-4 text-sm text-slate-500">Manage documents, users, onboarding progress and assistant usage.</p>
-      <Tabs
-        tabs={[
-          { id: 'documents', label: 'Documents' },
-          { id: 'users', label: 'Users' },
-          { id: 'onboarding', label: 'Onboarding progress' },
-          { id: 'analytics', label: 'Analytics' },
-          { id: 'chat', label: 'Assistant' },
-        ]}
-        active={tab}
-        onChange={setTab}
-      />
+    <Layout
+      nav={
+        <Tabs
+          tabs={[
+            { id: 'documents', label: 'Documents' },
+            { id: 'users', label: 'Users' },
+            { id: 'onboarding', label: 'Onboarding progress' },
+            { id: 'analytics', label: 'Analytics' },
+            { id: 'chat', label: 'Ask Annie' },
+          ]}
+          active={tab}
+          onChange={setTab}
+        />
+      }
+    >
       {tab === 'documents' && <DocumentsTab />}
       {tab === 'users' && <UsersTab />}
       {tab === 'onboarding' && <OnboardingProgressTab />}

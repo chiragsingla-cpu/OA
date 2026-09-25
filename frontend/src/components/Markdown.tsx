@@ -3,7 +3,9 @@ import remarkGfm from 'remark-gfm'
 
 export default function Markdown({ children, className = '' }: { children: string; className?: string }) {
   return (
-    <div className={`prose prose-sm prose-slate max-w-none ${className}`}>
+    <div
+      className={`prose prose-sm max-w-none text-ink prose-headings:font-semibold prose-headings:text-ink prose-a:text-brand prose-strong:text-ink ${className}`}
+    >
       <ReactMarkdown remarkPlugins={[remarkGfm]}>{children}</ReactMarkdown>
     </div>
   )

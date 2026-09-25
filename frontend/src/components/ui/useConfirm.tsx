@@ -1,4 +1,5 @@
 import { useCallback, useState, type ReactNode } from 'react'
+import Button from './Button'
 import Modal from './Modal'
 
 interface ConfirmOptions {
@@ -41,22 +42,12 @@ export function useConfirm() {
       footer={
         <>
           {/* Focus starts on Cancel for dangerous actions, so a stray Enter doesn't delete anything. */}
-          <button
-            onClick={cancel}
-            autoFocus={pending.danger}
-            className="rounded-lg px-4 py-2 text-sm text-slate-600 hover:bg-slate-100"
-          >
+          <Button variant="secondary" onClick={cancel} autoFocus={pending.danger}>
             Cancel
-          </button>
-          <button
-            onClick={() => close(true)}
-            autoFocus={!pending.danger}
-            className={`rounded-lg px-4 py-2 text-sm font-medium text-white ${
-              pending.danger ? 'bg-red-600 hover:bg-red-700' : 'bg-indigo-600 hover:bg-indigo-700'
-            }`}
-          >
+          </Button>
+          <Button variant={pending.danger ? 'danger' : 'primary'} onClick={() => close(true)} autoFocus={!pending.danger}>
             {pending.confirmLabel ?? 'Confirm'}
-          </button>
+          </Button>
         </>
       }
     >

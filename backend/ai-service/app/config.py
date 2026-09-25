@@ -17,7 +17,10 @@ class Settings(BaseSettings):
 
     chunk_size: int = 800
     chunk_overlap: int = 100
-    retrieval_top_k: int = 4
+    retrieval_top_k: int = 6
+    # Vector score (0-1) at which a question the classifier marked out_of_scope is answered from the
+    # documents anyway. Tuned for bge-small: off-topic questions scored up to ~0.79, product questions 0.81+.
+    out_of_scope_rescue_score: float = 0.81
     history_limit: int = 6
 
     classify_max_tokens: int = 512

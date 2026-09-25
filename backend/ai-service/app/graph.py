@@ -1,4 +1,4 @@
-"""LangGraph pipeline: classify → (retrieve → generate) | decline."""
+"""LangGraph pipeline: classify → (retrieve → generate | decline) | decline."""
 
 from typing import TypedDict
 
@@ -9,6 +9,8 @@ from app.config import settings
 from app.embeddings import embed_query
 
 ANSWERABLE = {"general_docs", "onboarding"}
+# Searched anyway: the classifier cannot see the documents, so it misjudges unfamiliar product names.
+RESCUABLE = {"out_of_scope"}
 
 DECLINE_MESSAGES = {
     "out_of_scope": (
@@ -47,7 +49,11 @@ def classify_node(state: ChatState) -> ChatState:
 
 
 def route_after_classify(state: ChatState) -> str:
-    return "retrieve" if state["category"] in ANSWERABLE else "decline"
+    return "retrieve" if state["category"] in ANSWERABLE | RESCUABLE else "decline"
+
+
+def route_after_retrieve(state: ChatState) -> str:
+    return "generate" if state["category"] in ANSWERABLE else "decline"
 
 
 def decline_node(state: ChatState) -> ChatState:
@@ -57,7 +63,13 @@ def decline_node(state: ChatState) -> ChatState:
 def retrieve_node(state: ChatState) -> ChatState:
     query_vector = embed_query(state["standalone_question"])
     chunks = vectorstore.search(query_vector, role=state["role"], limit=settings.retrieval_top_k)
-    return {"chunks": chunks}
+    if state["category"] not in RESCUABLE:
+        return {"chunks": chunks}
+
+    relevant = [chunk for chunk in chunks if chunk.get("score", 0.0) >= settings.out_of_scope_rescue_score]
+    if not relevant:
+        return {"chunks": []}
+    return {"chunks": relevant, "category": "general_docs"}
 
 
 def generate_node(state: ChatState) -> ChatState:
@@ -82,7 +94,7 @@ def build_graph():
 
     graph.add_edge(START, "classify")
     graph.add_conditional_edges("classify", route_after_classify, {"retrieve": "retrieve", "decline": "decline"})
-    graph.add_edge("retrieve", "generate")
+    graph.add_conditional_edges("retrieve", route_after_retrieve, {"generate": "generate", "decline": "decline"})
     graph.add_edge("generate", END)
     graph.add_edge("decline", END)
     return graph.compile()

@@ -1,10 +1,14 @@
 import axios from 'axios'
-import { useCallback, useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { api, errorMessage } from '../api/client'
 import type { ChatMessage, Conversation } from '../api/types'
+import { useAuth } from '../auth/AuthContext'
+import ChatComposer from './chat/ChatComposer'
 import ConversationList from './chat/ConversationList'
 import EmptyChat from './chat/EmptyChat'
 import MessageBubble from './chat/MessageBubble'
+import TypingIndicator from './chat/TypingIndicator'
+import Alert from './ui/Alert'
 
 interface ChatResponse {
   conversation: Conversation
@@ -15,6 +19,7 @@ interface ChatResponse {
  * @param draft text to pre-fill in the input (e.g. from "Ask about this document"), consumed once.
  */
 export default function ChatPanel({ draft, onDraftConsumed }: { draft?: string; onDraftConsumed?: () => void }) {
+  const { user } = useAuth()
   const [conversations, setConversations] = useState<Conversation[]>([])
   const [activeId, setActiveId] = useState<string | null>(null)
   const [messages, setMessages] = useState<ChatMessage[]>([])
@@ -88,57 +93,32 @@ export default function ChatPanel({ draft, onDraftConsumed }: { draft?: string; 
     }
   }
 
-  function handleSubmit(event: FormEvent) {
-    event.preventDefault()
-    send(input)
-  }
-
-  function handleKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
-    if (event.key === 'Enter' && !event.shiftKey) {
-      event.preventDefault()
-      send(input)
-    }
-  }
+  const title = conversations.find((c) => c.id === activeId)?.title ?? 'New conversation'
 
   return (
-    <div className="grid h-[calc(100vh-12rem)] min-h-[480px] grid-rows-[auto_1fr] gap-4 md:grid-cols-[240px_1fr] md:grid-rows-1">
+    <div className="grid h-[calc(100dvh-6.25rem)] min-h-[520px] grid-rows-[auto_1fr] overflow-hidden rounded border border-line bg-surface md:grid-cols-[290px_1fr] md:grid-rows-1">
       <ConversationList conversations={conversations} activeId={activeId} onSelect={openConversation} onNew={newChat} />
 
-      <section className="flex min-h-0 flex-col rounded-xl border border-slate-200 bg-white">
-        <div className="flex-1 space-y-4 overflow-y-auto p-4">
+      <section className="flex min-h-0 flex-col">
+        <div className="flex min-h-[52px] flex-wrap items-center justify-between gap-x-4 border-b border-line px-5 py-2 md:px-7">
+          <h2 className="truncate text-[15px] font-semibold">{title}</h2>
+          <span className="text-xs text-muted">
+            Answers use documents visible to the <span className="capitalize">{user?.role}</span> role
+          </span>
+        </div>
+
+        <div className="flex-1 overflow-y-auto">
           {messages.length === 0 && !sending && <EmptyChat onPick={send} />}
           {messages.map((message) => (
-            <MessageBubble key={message.id} message={message} />
+            <MessageBubble key={message.id} message={message} userName={user?.name ?? 'You'} />
           ))}
-          {sending && (
-            <div className="flex">
-              <div className="rounded-2xl bg-slate-100 px-4 py-3 text-sm text-slate-500">Searching documents…</div>
-            </div>
-          )}
+          {sending && <TypingIndicator />}
           <div ref={bottomRef} />
         </div>
 
-        {error && <p className="mx-4 mb-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
+        {error && <Alert className="mx-5 mb-1 md:mx-7">{error}</Alert>}
 
-        <form onSubmit={handleSubmit} className="flex gap-2 border-t border-slate-200 p-3">
-          <textarea
-            ref={inputRef}
-            rows={1}
-            value={input}
-            maxLength={2000}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="Ask about policies, onboarding, projects…"
-            className="flex-1 resize-none rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
-          />
-          <button
-            type="submit"
-            disabled={sending || !input.trim()}
-            className="rounded-lg bg-indigo-600 px-4 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
-          >
-            Send
-          </button>
-        </form>
+        <ChatComposer value={input} onChange={setInput} onSend={send} sending={sending} inputRef={inputRef} />
       </section>
     </div>
   )

@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import { api, errorMessage } from '../../api/client'
 import { CATEGORY_LABELS, type DocumentCategory, type DocumentItem } from '../../api/types'
+import Alert from '../ui/Alert'
+import { muted, panel } from '../ui/styles'
 import DocumentReader from './DocumentReader'
 
 const CATEGORY_ORDER: DocumentCategory[] = ['checklist', 'handbook', 'hr_policy', 'brd']
@@ -26,34 +28,42 @@ export default function OnboardingView({ onAsk }: { onAsk: (document: DocumentIt
       .finally(() => setLoading(false))
   }, [])
 
-  if (loading) return <p className="text-sm text-slate-500">Loading documents…</p>
-  if (error) return <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>
+  if (loading) return <p className={muted}>Loading documents…</p>
+  if (error) return <Alert>{error}</Alert>
   if (documents.length === 0) {
-    return <p className="text-sm text-slate-500">No onboarding documents have been published for your role yet.</p>
+    return <p className={muted}>No onboarding documents have been published for your role yet.</p>
   }
 
   return (
-    <div className="grid gap-6 md:grid-cols-[280px_1fr]">
-      <nav className="space-y-5">
+    <div className="grid items-start gap-4 md:grid-cols-[280px_1fr]">
+      <nav className={`${panel} overflow-hidden`} aria-label="Onboarding documents">
         {CATEGORY_ORDER.map((category) => {
           const items = documents.filter((doc) => doc.category === category)
           if (items.length === 0) return null
           return (
             <div key={category}>
-              <h3 className="mb-1 text-xs font-semibold tracking-wide text-slate-400 uppercase">{CATEGORY_LABELS[category]}</h3>
-              <ul className="space-y-0.5">
-                {items.map((doc) => (
-                  <li key={doc.id}>
-                    <button
-                      onClick={() => setSelectedId(doc.id)}
-                      className={`w-full rounded-md px-2 py-1.5 text-left text-sm ${
-                        doc.id === selectedId ? 'bg-indigo-50 font-medium text-indigo-700' : 'text-slate-700 hover:bg-slate-100'
-                      }`}
-                    >
-                      {doc.title}
-                    </button>
-                  </li>
-                ))}
+              <h3 className="border-b border-line bg-subtle px-4 py-2 text-xs font-semibold tracking-wider text-muted uppercase">
+                {CATEGORY_LABELS[category]}
+              </h3>
+              <ul>
+                {items.map((doc) => {
+                  const active = doc.id === selectedId
+                  return (
+                    <li key={doc.id} className="border-b border-line">
+                      <button
+                        onClick={() => setSelectedId(doc.id)}
+                        aria-current={active ? 'true' : undefined}
+                        className={`block w-full px-4 py-2.5 text-left text-[13px] focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-brand ${
+                          active
+                            ? 'bg-brand-soft font-semibold text-brand shadow-[inset_3px_0_0_var(--color-brand)]'
+                            : 'text-ink hover:bg-subtle'
+                        }`}
+                      >
+                        {doc.title}
+                      </button>
+                    </li>
+                  )
+                })}
               </ul>
             </div>
           )

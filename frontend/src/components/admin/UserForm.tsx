@@ -1,8 +1,12 @@
 import { useState, type FormEvent } from 'react'
 import { api, errorMessage } from '../../api/client'
 import type { Role, User } from '../../api/types'
+import Alert from '../ui/Alert'
+import Button from '../ui/Button'
+import { inputClass } from '../ui/form'
+import { panel } from '../ui/styles'
 
-const input = 'w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-indigo-500'
+const input = inputClass
 
 /**
  * Create a user, or edit one (pass `user`). When editing, a blank password keeps the current one.
@@ -43,32 +47,32 @@ export default function UserForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4 rounded-xl border border-slate-200 bg-white p-5">
-      <h3 className="font-semibold">{user ? `Edit ${user.name}` : 'Add a user'}</h3>
+    <form onSubmit={handleSubmit} className={`${panel} space-y-4 p-5`}>
+      <h3 className="text-[15px] font-semibold">{user ? `Edit ${user.name}` : 'Add a user'}</h3>
       <div className="grid gap-4 sm:grid-cols-2">
         <label className="text-sm">
-          <span className="mb-1 block font-medium">Full name</span>
+          <span className="mb-1.5 block text-[13px] font-semibold">Full name</span>
           <input required maxLength={100} value={name} onChange={(e) => setName(e.target.value)} className={input} />
         </label>
         <label className="text-sm">
-          <span className="mb-1 block font-medium">Email</span>
+          <span className="mb-1.5 block text-[13px] font-semibold">Email</span>
           <input required type="email" value={email} onChange={(e) => setEmail(e.target.value)} className={input} />
         </label>
         <label className="text-sm">
-          <span className="mb-1 block font-medium">Role</span>
+          <span className="mb-1.5 block text-[13px] font-semibold">Role</span>
           <select
             value={role}
             disabled={isSelf}
             title={isSelf ? 'You cannot change your own role' : undefined}
             onChange={(e) => setRole(e.target.value as Role)}
-            className={`${input} disabled:bg-slate-50`}
+            className={input}
           >
             <option value="employee">Employee</option>
             <option value="admin">Admin</option>
           </select>
         </label>
         <label className="text-sm">
-          <span className="mb-1 block font-medium">{user ? 'New password' : 'Password'}</span>
+          <span className="mb-1.5 block text-[13px] font-semibold">{user ? 'New password' : 'Password'}</span>
           <input
             type="password"
             required={!user}
@@ -82,18 +86,14 @@ export default function UserForm({
         </label>
       </div>
 
-      {error && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
+      {error && <Alert>{error}</Alert>}
       <div className="flex gap-2">
-        <button
-          type="submit"
-          disabled={saving}
-          className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-60"
-        >
+        <Button type="submit" disabled={saving}>
           {saving ? 'Saving…' : 'Save'}
-        </button>
-        <button type="button" onClick={onCancel} className="rounded-lg px-4 py-2 text-sm text-slate-600 hover:bg-slate-100">
+        </Button>
+        <Button variant="secondary" onClick={onCancel}>
           Cancel
-        </button>
+        </Button>
       </div>
     </form>
   )

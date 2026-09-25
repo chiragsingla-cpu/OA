@@ -1,7 +1,11 @@
+import { MessageSquare } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { api, errorMessage } from '../../api/client'
 import { CATEGORY_LABELS, type DocumentItem } from '../../api/types'
 import Markdown from '../Markdown'
+import Alert from '../ui/Alert'
+import Button from '../ui/Button'
+import { muted, panel } from '../ui/styles'
 import Checklist from './Checklist'
 
 /**
@@ -31,32 +35,30 @@ export default function DocumentReader({
     }
   }, [documentId])
 
-  if (error) return <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>
-  if (!document) return <p className="text-sm text-slate-500">Loading…</p>
+  if (error) return <Alert>{error}</Alert>
+  if (!document) return <p className={muted}>Loading…</p>
 
   const body = document.body_text ?? ''
   const preview = !onAsk
 
   return (
-    <article className={preview ? '' : 'rounded-xl border border-slate-200 bg-white p-6'}>
-      <div className="mb-4 flex flex-wrap items-start justify-between gap-3 border-b border-slate-100 pb-4">
+    <article className={preview ? '' : `${panel} px-6 py-6 md:px-8`}>
+      <div className="mb-5 flex flex-wrap items-start justify-between gap-3 border-b border-line pb-4">
         <div>
-          <p className="text-xs font-medium text-indigo-600">{CATEGORY_LABELS[document.category]}</p>
-          <h2 className="text-lg font-semibold">{document.title}</h2>
+          <p className="text-xs font-semibold tracking-wider text-brand uppercase">{CATEGORY_LABELS[document.category]}</p>
+          <h2 className="mt-1 text-xl font-semibold">{document.title}</h2>
           {preview && (
-            <p className="mt-1 text-xs text-slate-500">
+            <p className="mt-1 text-xs text-muted">
               Visible to: <span className="capitalize">{document.allowed_roles.join(', ')}</span>
               {document.original_filename && <> · Source file: {document.original_filename}</>}
             </p>
           )}
         </div>
         {onAsk && (
-          <button
-            onClick={() => onAsk(document)}
-            className="rounded-lg border border-indigo-200 px-3 py-1.5 text-sm font-medium text-indigo-700 hover:bg-indigo-50"
-          >
-            Ask the assistant about this
-          </button>
+          <Button variant="secondary" onClick={() => onAsk(document)}>
+            <MessageSquare size={15} className="text-brand" />
+            Ask Annie about this
+          </Button>
         )}
       </div>
       {document.category === 'checklist' && !preview ? (

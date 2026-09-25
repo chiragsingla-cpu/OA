@@ -1,7 +1,12 @@
+import { Plus } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { api, errorMessage } from '../../api/client'
 import type { User } from '../../api/types'
 import { useAuth } from '../../auth/AuthContext'
+import Alert from '../ui/Alert'
+import Button from '../ui/Button'
+import PageHeader from '../ui/PageHeader'
+import { table, tableWrap, td, th } from '../ui/styles'
 import { useConfirm } from '../ui/useConfirm'
 import UserForm from './UserForm'
 
@@ -53,69 +58,67 @@ export default function UsersTab() {
     load()
   }
 
+  const admins = users.filter((user) => user.role === 'admin').length
+
   return (
-    <div className="space-y-4">
-      {editing ? (
-        <UserForm
-          user={editing === 'new' ? undefined : editing}
-          isSelf={editing !== 'new' && editing.id === me?.id}
-          onSaved={handleSaved}
-          onCancel={() => setEditing(null)}
-        />
-      ) : (
-        <button
-          onClick={() => setEditing('new')}
-          className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700"
-        >
-          + Add user
-        </button>
+    <div>
+      <PageHeader
+        title="Users"
+        summary={`${users.length} total · ${admins} admin${admins === 1 ? '' : 's'}`}
+        actions={
+          !editing && (
+            <Button onClick={() => setEditing('new')}>
+              <Plus size={15} />
+              Add user
+            </Button>
+          )
+        }
+      />
+
+      {editing && (
+        <div className="mb-4">
+          <UserForm
+            user={editing === 'new' ? undefined : editing}
+            isSelf={editing !== 'new' && editing.id === me?.id}
+            onSaved={handleSaved}
+            onCancel={() => setEditing(null)}
+          />
+        </div>
       )}
+      {error && <Alert className="mb-4">{error}</Alert>}
 
-      {error && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
-
-      <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
-        <table className="w-full text-left text-sm">
-          <thead className="bg-slate-50 text-xs text-slate-500 uppercase">
+      <div className={tableWrap}>
+        <table className={table}>
+          <thead>
             <tr>
-              <th className="px-4 py-2">Name</th>
-              <th className="px-4 py-2">Email</th>
-              <th className="px-4 py-2">Role</th>
-              <th className="px-4 py-2" />
+              <th className={th}>Name</th>
+              <th className={th}>Email</th>
+              <th className={th}>Role</th>
+              <th className={`${th} text-right`}>Actions</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100">
+          <tbody>
             {users.map((user) => (
-              <tr key={user.id}>
-                <td className="px-4 py-2 font-medium">
+              <tr key={user.id} className="hover:bg-subtle">
+                <td className={`${td} font-semibold`}>
                   {user.name}
-                  {user.id === me?.id && <span className="ml-2 text-xs font-normal text-slate-400">(you)</span>}
+                  {user.id === me?.id && <span className="ml-2 text-xs font-normal text-faint">(you)</span>}
                 </td>
-                <td className="px-4 py-2 text-slate-600">{user.email}</td>
-                <td className="px-4 py-2">
-                  <span
-                    className={`rounded-full px-2 py-0.5 text-xs font-medium capitalize ${
-                      user.role === 'admin' ? 'bg-indigo-50 text-indigo-700' : 'bg-slate-100 text-slate-600'
-                    }`}
-                  >
-                    {user.role}
-                  </span>
-                </td>
-                <td className="px-4 py-2 text-right whitespace-nowrap">
-                  <button
-                    onClick={() => setEditing(user)}
-                    disabled={busyId === user.id}
-                    className="ml-1 rounded-md px-2 py-1 text-xs text-slate-600 hover:bg-slate-100 disabled:opacity-40"
-                  >
+                <td className={`${td} text-muted`}>{user.email}</td>
+                <td className={`${td} capitalize ${user.role === 'admin' ? 'font-semibold text-brand' : ''}`}>{user.role}</td>
+                <td className={`${td} text-right whitespace-nowrap`}>
+                  <Button variant="link" onClick={() => setEditing(user)} disabled={busyId === user.id}>
                     Edit
-                  </button>
+                  </Button>
                   {user.id !== me?.id && (
-                    <button
-                      onClick={() => remove(user)}
-                      disabled={busyId === user.id}
-                      className="ml-1 rounded-md px-2 py-1 text-xs text-red-600 hover:bg-red-50 disabled:opacity-40"
-                    >
-                      Delete
-                    </button>
+                    <>
+                      <span aria-hidden className="text-line">
+                        {' | '}
+                      </span>
+                      <Button variant="danger-link" onClick={() => remove(user)} disabled={busyId === user.id}>
+                        Delete
+                      </Button>
+                    </>
                   )}
                 </td>
               </tr>

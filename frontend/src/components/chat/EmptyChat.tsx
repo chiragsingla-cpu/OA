@@ -7,20 +7,24 @@ const SUGGESTIONS = [
 
 export default function EmptyChat({ onPick }: { onPick: (question: string) => void }) {
   return (
-    <div className="mx-auto max-w-md py-10 text-center">
-      <h2 className="text-lg font-semibold">Ask the assistant</h2>
-      <p className="mt-1 text-sm text-slate-500">Answers come from company documents you have access to.</p>
-      <div className="mt-6 grid gap-2">
+    <div className="mx-auto max-w-lg px-5 py-12">
+      <h2 className="text-lg font-semibold">Ask Annie</h2>
+      <p className="mt-1 text-sm text-muted">
+        Annie answers from the company documents you have access to, and names the source of every answer.
+      </p>
+      <p className="mt-6 mb-2 text-xs font-semibold tracking-wider text-faint uppercase">Try asking</p>
+      <ul className="overflow-hidden rounded border border-line">
         {SUGGESTIONS.map((suggestion) => (
-          <button
-            key={suggestion}
-            onClick={() => onPick(suggestion)}
-            className="rounded-lg border border-slate-200 px-3 py-2 text-left text-sm text-slate-700 hover:border-indigo-300 hover:bg-indigo-50"
-          >
-            {suggestion}
-          </button>
+          <li key={suggestion} className="border-b border-line last:border-b-0">
+            <button
+              onClick={() => onPick(suggestion)}
+              className="block w-full px-4 py-2.5 text-left text-sm text-brand hover:bg-brand-soft focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-brand"
+            >
+              {suggestion}
+            </button>
+          </li>
         ))}
-      </div>
+      </ul>
     </div>
   )
 }

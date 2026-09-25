@@ -1,34 +1,66 @@
+import { FileText } from 'lucide-react'
 import { QUESTION_CATEGORY_LABELS, type ChatMessage } from '../../api/types'
 import Markdown from '../Markdown'
 
-export default function MessageBubble({ message }: { message: ChatMessage }) {
+function initials(name: string) {
+  return name
+    .split(' ')
+    .map((part) => part[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase()
+}
+
+/** One full-width message row: square avatar, name, then the text (Annie's rows add their sources). */
+export default function MessageBubble({ message, userName }: { message: ChatMessage; userName: string }) {
   if (message.role === 'user') {
     return (
-      <div className="flex justify-end">
-        <div className="max-w-[80%] rounded-2xl rounded-br-sm bg-indigo-600 px-4 py-2 text-sm whitespace-pre-wrap text-white">
-          {message.content}
+      <div className="flex gap-3.5 border-b border-line bg-surface px-5 py-4 md:px-7">
+        <span className="flex size-[30px] shrink-0 items-center justify-center rounded bg-[#f4c9a8] text-xs font-bold text-[#6b3413]">
+          {initials(userName)}
+        </span>
+        <div className="min-w-0 max-w-3xl">
+          <p className="text-[13px] font-semibold">You</p>
+          <p className="mt-1 text-sm leading-relaxed whitespace-pre-wrap">{message.content}</p>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="flex">
-      <div className="max-w-[85%] rounded-2xl rounded-bl-sm bg-slate-100 px-4 py-3">
-        <Markdown>{message.content}</Markdown>
+    <div className="flex gap-3.5 border-b border-line bg-subtle px-5 py-4 md:px-7">
+      <AnnieAvatar />
+      <div className="min-w-0 max-w-3xl">
+        <p className="text-[13px] font-semibold">Annie</p>
+        <Markdown className="mt-1">{message.content}</Markdown>
         {(message.sources?.length || message.category) && (
-          <div className="mt-2 flex flex-wrap items-center gap-1.5 text-xs">
-            {message.sources?.map((source) => (
-              <span key={source.document_id} className="rounded-full bg-white px-2 py-0.5 text-slate-600 ring-1 ring-slate-200">
-                📄 {source.title}
-              </span>
-            ))}
-            {message.category && (
-              <span className="text-slate-400">{QUESTION_CATEGORY_LABELS[message.category] ?? message.category}</span>
+          <p className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted">
+            {!!message.sources?.length && (
+              <>
+                <FileText size={13} aria-hidden />
+                Source:
+                {message.sources.map((source, i) => (
+                  <span key={source.document_id} className="font-medium text-brand">
+                    {source.title}
+                    {i < message.sources!.length - 1 && ','}
+                  </span>
+                ))}
+              </>
             )}
-          </div>
+            {message.category && (
+              <span className="text-faint">· {QUESTION_CATEGORY_LABELS[message.category] ?? message.category}</span>
+            )}
+          </p>
         )}
       </div>
     </div>
+  )
+}
+
+export function AnnieAvatar() {
+  return (
+    <span aria-hidden className="flex size-[30px] shrink-0 items-center justify-center rounded bg-brand text-xs font-bold text-white">
+      A
+    </span>
   )
 }

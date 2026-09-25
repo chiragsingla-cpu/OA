@@ -1,6 +1,56 @@
 @import "tailwindcss";
 @plugin "@tailwindcss/typography";
 
+/* Design tokens: "Corporate minimal" (navy header, blue accent, 4px corners). */
+@theme {
+  --font-sans: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+
+  --color-page: #f3f4f6;
+  --color-surface: #ffffff;
+  --color-subtle: #f7f8fa;
+  --color-line: #d9dce1;
+  --color-ink: #1b1f24;
+  --color-muted: #57606a;
+  --color-faint: #848d97;
+  --color-brand: #0b5cad;
+  --color-brand-hover: #094c8f;
+  --color-brand-soft: #e8f1fb;
+  --color-navy: #0f2540;
+  --color-navy-muted: #a9b8cc;
+  --color-tab: #4493f8;
+  --color-ok: #1a7f37;
+  --color-warn: #9a6700;
+  --color-danger: #cf222e;
+}
+
 body {
-  @apply bg-slate-50 text-slate-900 antialiased;
+  @apply bg-page font-sans text-ink antialiased;
+}
+
+@keyframes typing-pulse {
+  0%,
+  100% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.typing-dot {
+  @apply size-1.5 bg-brand;
+  animation: typing-pulse 1s infinite;
+}
+.typing-dot:nth-child(2) {
+  animation-delay: 0.2s;
+}
+.typing-dot:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .typing-dot {
+    animation: none;
+  }
 }

@@ -1,4 +1,17 @@
+import { Plus, Search } from 'lucide-react'
+import { useState } from 'react'
 import type { Conversation } from '../../api/types'
+import Button from '../ui/Button'
+
+/** "10:43" for today, otherwise "25 Sep". */
+function formatWhen(iso?: string) {
+  if (!iso) return ''
+  const date = new Date(iso)
+  const today = new Date().toDateString() === date.toDateString()
+  return today
+    ? date.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })
+    : date.toLocaleDateString(undefined, { day: 'numeric', month: 'short' })
+}
 
 export default function ConversationList({
   conversations,
@@ -11,29 +24,52 @@ export default function ConversationList({
   onSelect: (id: string) => void
   onNew: () => void
 }) {
+  const [filter, setFilter] = useState('')
+  const shown = conversations.filter((c) => c.title.toLowerCase().includes(filter.trim().toLowerCase()))
+
   return (
-    <aside className="flex max-h-40 flex-col overflow-hidden rounded-xl border border-slate-200 bg-white md:max-h-none">
-      <button
-        onClick={onNew}
-        className="m-2 rounded-lg bg-indigo-600 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-700"
-      >
-        + New chat
-      </button>
-      <ul className="flex-1 overflow-y-auto px-2 pb-2">
-        {conversations.map((conversation) => (
-          <li key={conversation.id}>
-            <button
-              onClick={() => onSelect(conversation.id)}
-              className={`w-full truncate rounded-md px-2 py-1.5 text-left text-sm ${
-                conversation.id === activeId ? 'bg-indigo-50 text-indigo-700' : 'text-slate-600 hover:bg-slate-50'
-              }`}
-              title={conversation.title}
-            >
-              {conversation.title}
-            </button>
-          </li>
-        ))}
-        {conversations.length === 0 && <li className="px-2 py-1 text-xs text-slate-400">No conversations yet</li>}
+    <aside className="flex max-h-56 min-h-0 flex-col border-b border-line md:max-h-none md:border-r md:border-b-0">
+      <div className="space-y-3 border-b border-line p-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-semibold">Conversations</h2>
+          <Button size="sm" onClick={onNew}>
+            <Plus size={14} />
+            New
+          </Button>
+        </div>
+        <label className="flex h-[34px] items-center gap-2 rounded border border-line bg-subtle px-2.5 text-faint focus-within:border-brand">
+          <Search size={15} />
+          <span className="sr-only">Filter conversations</span>
+          <input
+            value={filter}
+            onChange={(e) => setFilter(e.target.value)}
+            placeholder="Filter conversations"
+            className="w-full bg-transparent text-[13px] text-ink outline-none placeholder:text-faint"
+          />
+        </label>
+      </div>
+      <ul className="flex-1 overflow-y-auto">
+        {shown.map((conversation) => {
+          const active = conversation.id === activeId
+          return (
+            <li key={conversation.id} className="border-b border-line">
+              <button
+                onClick={() => onSelect(conversation.id)}
+                aria-current={active ? 'true' : undefined}
+                title={conversation.title}
+                className={`block w-full px-4 py-3 text-left focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-brand ${
+                  active ? 'bg-brand-soft shadow-[inset_3px_0_0_var(--color-brand)]' : 'hover:bg-subtle'
+                }`}
+              >
+                <span className="block truncate text-[13px] font-semibold">{conversation.title}</span>
+                <span className="block text-xs text-faint">{formatWhen(conversation.updated_at)}</span>
+              </button>
+            </li>
+          )
+        })}
+        {shown.length === 0 && (
+          <li className="px-4 py-3 text-xs text-faint">{conversations.length ? 'No matching conversations' : 'No conversations yet'}</li>
+        )}
       </ul>
     </aside>
   )

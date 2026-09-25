@@ -1,8 +1,12 @@
 import { useState, type FormEvent } from 'react'
 import { api, errorMessage } from '../../api/client'
 import { CATEGORY_LABELS, type DocumentCategory, type DocumentItem } from '../../api/types'
+import Alert from '../ui/Alert'
+import Button from '../ui/Button'
+import { inputClass } from '../ui/form'
+import { panel } from '../ui/styles'
 
-const input = 'w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-indigo-500'
+const input = inputClass
 
 /**
  * Create a document, or edit one (pass `document`). When editing, the content only changes if a new file or text is given.
@@ -51,15 +55,15 @@ export default function DocumentForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4 rounded-xl border border-slate-200 bg-white p-5">
-      <h3 className="font-semibold">{document ? `Edit "${document.title}"` : 'Add a document'}</h3>
+    <form onSubmit={handleSubmit} className={`${panel} space-y-4 p-5`}>
+      <h3 className="text-[15px] font-semibold">{document ? `Edit "${document.title}"` : 'Add a document'}</h3>
       <div className="grid gap-4 sm:grid-cols-2">
         <label className="text-sm">
-          <span className="mb-1 block font-medium">Title</span>
+          <span className="mb-1.5 block text-[13px] font-semibold">Title</span>
           <input required maxLength={200} value={title} onChange={(e) => setTitle(e.target.value)} className={input} />
         </label>
         <label className="text-sm">
-          <span className="mb-1 block font-medium">Category</span>
+          <span className="mb-1.5 block text-[13px] font-semibold">Category</span>
           <select value={category} onChange={(e) => setCategory(e.target.value as DocumentCategory)} className={input}>
             {Object.entries(CATEGORY_LABELS).map(([value, label]) => (
               <option key={value} value={value}>
@@ -71,8 +75,13 @@ export default function DocumentForm({
       </div>
 
       <label className="flex items-center gap-2 text-sm">
-        <input type="checkbox" checked={employeeAccess} onChange={(e) => setEmployeeAccess(e.target.checked)} />
-        Visible to employees <span className="text-slate-400">(admins can always see every document)</span>
+        <input
+          type="checkbox"
+          className="size-4 accent-brand"
+          checked={employeeAccess}
+          onChange={(e) => setEmployeeAccess(e.target.checked)}
+        />
+        Visible to employees <span className="text-faint">(admins can always see every document)</span>
       </label>
 
       <div className="flex flex-wrap gap-4 text-sm">
@@ -86,7 +95,7 @@ export default function DocumentForm({
           required
           accept=".pdf,.docx,.txt,.md"
           onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-          className="block text-sm"
+          className="block text-sm text-muted file:mr-3 file:h-9 file:rounded file:border file:border-line file:bg-subtle file:px-3 file:text-sm file:font-medium file:text-ink hover:file:bg-page"
         />
       )}
       {source === 'text' && (
@@ -100,18 +109,14 @@ export default function DocumentForm({
         />
       )}
 
-      {error && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
+      {error && <Alert>{error}</Alert>}
       <div className="flex gap-2">
-        <button
-          type="submit"
-          disabled={saving}
-          className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-60"
-        >
+        <Button type="submit" disabled={saving}>
           {saving ? 'Saving & indexing…' : 'Save'}
-        </button>
-        <button type="button" onClick={onCancel} className="rounded-lg px-4 py-2 text-sm text-slate-600 hover:bg-slate-100">
+        </Button>
+        <Button variant="secondary" onClick={onCancel}>
           Cancel
-        </button>
+        </Button>
       </div>
     </form>
   )
@@ -120,7 +125,7 @@ export default function DocumentForm({
 function Radio({ label, checked, onChange }: { label: string; checked: boolean; onChange: () => void }) {
   return (
     <label className="flex items-center gap-1.5">
-      <input type="radio" checked={checked} onChange={onChange} />
+      <input type="radio" className="size-4 accent-brand" checked={checked} onChange={onChange} />
       {label}
     </label>
   )

@@ -1,19 +1,19 @@
 import { useEffect, useState } from 'react'
 import { api, errorMessage } from '../../api/client'
-import { CATEGORY_LABELS, type DocumentItem, type DocumentStatus } from '../../api/types'
+import type { DocumentItem } from '../../api/types'
 import DocumentReader from '../onboarding/DocumentReader'
+import Alert from '../ui/Alert'
 import Modal from '../ui/Modal'
+import PageHeader from '../ui/PageHeader'
+import { panel, table, tableWrap, th } from '../ui/styles'
 import { useConfirm } from '../ui/useConfirm'
 import DocumentForm from './DocumentForm'
-
-const STATUS_STYLES: Record<DocumentStatus, string> = {
-  indexed: 'bg-emerald-50 text-emerald-700',
-  pending: 'bg-amber-50 text-amber-700',
-  failed: 'bg-red-50 text-red-700',
-}
+import DocumentRow, { type DocumentAction } from './DocumentRow'
+import DocumentsToolbar, { type DocumentFilters } from './DocumentsToolbar'
 
 export default function DocumentsTab() {
   const [documents, setDocuments] = useState<DocumentItem[]>([])
+  const [filters, setFilters] = useState<DocumentFilters>({ query: '', category: 'all', status: 'all' })
   const [editing, setEditing] = useState<DocumentItem | 'new' | null>(null)
   const [busyId, setBusyId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -29,14 +29,16 @@ export default function DocumentsTab() {
 
   useEffect(load, [])
 
-  async function act(document: DocumentItem, action: 'reindex' | 'delete') {
+  async function act(action: DocumentAction, document: DocumentItem) {
+    if (action === 'view') return setViewing(document)
+    if (action === 'edit') return setEditing(document)
     if (
       action === 'delete' &&
       !(await confirm({
         title: 'Delete document?',
         message: (
           <>
-            <strong>{document.title}</strong> will be deleted and removed from the assistant. This cannot be undone.
+            <strong>{document.title}</strong> will be deleted and removed from Annie's knowledge. This cannot be undone.
           </>
         ),
         confirmLabel: 'Delete',
@@ -63,68 +65,82 @@ export default function DocumentsTab() {
     load()
   }
 
+  const query = filters.query.trim().toLowerCase()
+  const shown = documents.filter(
+    (doc) =>
+      (filters.category === 'all' || doc.category === filters.category) &&
+      (filters.status === 'all' || doc.status === filters.status) &&
+      (!query || `${doc.title} ${doc.original_filename ?? ''}`.toLowerCase().includes(query)),
+  )
+  const count = (test: (doc: DocumentItem) => boolean) => documents.filter(test).length
+  const stats = [
+    { label: 'Visible to employees', value: count((doc) => doc.allowed_roles.includes('employee')) },
+    { label: 'Admin only', value: count((doc) => !doc.allowed_roles.includes('employee')) },
+    { label: 'Failed to index', value: count((doc) => doc.status === 'failed') },
+  ]
+
   return (
-    <div className="space-y-4">
-      {editing ? (
-        <DocumentForm
-          document={editing === 'new' ? undefined : editing}
-          onSaved={handleSaved}
-          onCancel={() => setEditing(null)}
-        />
-      ) : (
-        <button
-          onClick={() => setEditing('new')}
-          className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700"
-        >
-          + Add document
-        </button>
+    <div>
+      <PageHeader
+        title="Documents"
+        summary={`${documents.length} total · ${count((d) => d.status === 'indexed')} indexed · ${count((d) => d.status === 'pending')} pending`}
+      />
+      <DocumentsToolbar filters={filters} onChange={setFilters} onAdd={editing ? undefined : () => setEditing('new')} />
+
+      {editing && (
+        <div className="mb-4">
+          <DocumentForm
+            document={editing === 'new' ? undefined : editing}
+            onSaved={handleSaved}
+            onCancel={() => setEditing(null)}
+          />
+        </div>
       )}
+      {error && <Alert className="mb-4">{error}</Alert>}
 
-      {error && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
-
-      <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
-        <table className="w-full text-left text-sm">
-          <thead className="bg-slate-50 text-xs text-slate-500 uppercase">
+      <div className={tableWrap}>
+        <table className={table}>
+          <thead>
             <tr>
-              <th className="px-4 py-2">Title</th>
-              <th className="px-4 py-2">Category</th>
-              <th className="px-4 py-2">Visible to</th>
-              <th className="px-4 py-2">Index status</th>
-              <th className="px-4 py-2" />
+              {['Title', 'File', 'Category', 'Visible to', 'Status'].map((heading) => (
+                <th key={heading} className={th}>
+                  {heading}
+                </th>
+              ))}
+              <th className={`${th} text-right`}>Actions</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100">
-            {documents.map((doc) => (
-              <tr key={doc.id}>
-                <td className="px-4 py-2 font-medium">
-                  {doc.title}
-                  {doc.original_filename && <div className="text-xs font-normal text-slate-400">{doc.original_filename}</div>}
-                </td>
-                <td className="px-4 py-2 text-slate-600">{CATEGORY_LABELS[doc.category]}</td>
-                <td className="px-4 py-2 text-slate-600 capitalize">{doc.allowed_roles.join(', ')}</td>
-                <td className="px-4 py-2">
-                  <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_STYLES[doc.status]}`} title={doc.error ?? ''}>
-                    {doc.status}
-                    {doc.status === 'indexed' && doc.chunk_count ? ` · ${doc.chunk_count} chunks` : ''}
-                  </span>
-                </td>
-                <td className="px-4 py-2 text-right whitespace-nowrap">
-                  <RowButton label="View" onClick={() => setViewing(doc)} disabled={busyId === doc.id} />
-                  <RowButton label="Edit" onClick={() => setEditing(doc)} disabled={busyId === doc.id} />
-                  <RowButton label="Reindex" onClick={() => act(doc, 'reindex')} disabled={busyId === doc.id} />
-                  <RowButton label="Delete" onClick={() => act(doc, 'delete')} disabled={busyId === doc.id} danger />
-                </td>
-              </tr>
+          <tbody>
+            {shown.map((doc) => (
+              <DocumentRow key={doc.id} document={doc} busy={busyId === doc.id} onAction={act} />
             ))}
-            {documents.length === 0 && (
+            {shown.length === 0 && (
               <tr>
-                <td colSpan={5} className="px-4 py-6 text-center text-slate-400">
-                  No documents yet. Add one, or run <code>php artisan app:seed-docs</code>.
+                <td colSpan={6} className="border-b border-line px-4 py-8 text-center text-muted">
+                  {documents.length ? (
+                    'No documents match these filters.'
+                  ) : (
+                    <>
+                      No documents yet. Add one, or run <code>php artisan app:seed-docs</code>.
+                    </>
+                  )}
                 </td>
               </tr>
             )}
           </tbody>
         </table>
+        <p className="bg-subtle px-4 py-2.5 text-xs text-muted">
+          Showing {shown.length} of {documents.length} documents
+        </p>
+      </div>
+
+      <div className="mt-4 grid gap-4 sm:grid-cols-3">
+        {stats.map((stat) => (
+          <div key={stat.label} className={`${panel} px-4 py-3.5`}>
+            <p className="text-xs text-muted">{stat.label}</p>
+            <p className="mt-1 text-[22px] font-semibold tabular-nums">{stat.value}</p>
+          </div>
+        ))}
       </div>
 
       {viewing && (
@@ -134,19 +150,5 @@ export default function DocumentsTab() {
       )}
       {confirmModal}
     </div>
-  )
-}
-
-function RowButton({ label, onClick, disabled, danger }: { label: string; onClick: () => void; disabled: boolean; danger?: boolean }) {
-  return (
-    <button
-      onClick={onClick}
-      disabled={disabled}
-      className={`ml-1 rounded-md px-2 py-1 text-xs disabled:opacity-40 ${
-        danger ? 'text-red-600 hover:bg-red-50' : 'text-slate-600 hover:bg-slate-100'
-      }`}
-    >
-      {label}
-    </button>
   )
 }

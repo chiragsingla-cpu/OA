@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { api, errorMessage } from '../../api/client'
 import Markdown from '../Markdown'
+import Alert from '../ui/Alert'
 
 // Must match Document::checklistItems() in the Laravel API: item indexes are how progress is stored.
 const ITEM = /^\s*[-*]\s\[[ xX]\]\s+(.*)$/
@@ -64,30 +65,34 @@ export default function Checklist({ documentId, markdown }: { documentId: string
 
   return (
     <div>
-      <div className="mb-4">
-        <div className="mb-1 flex justify-between text-xs text-slate-500">
-          <span>Progress</span>
-          <span>
-            {completed}/{itemCount} done
-          </span>
+      <div className="mb-5 flex items-center gap-4 rounded border border-line bg-subtle px-4 py-3">
+        <span className="text-lg font-semibold whitespace-nowrap tabular-nums">
+          {completed}
+          <span className="text-sm font-medium text-muted"> / {itemCount} done</span>
+        </span>
+        <div className="h-1.5 flex-1 rounded-full bg-line">
+          <div className="h-1.5 rounded-full bg-ok transition-all" style={{ width: `${percent}%` }} />
         </div>
-        <div className="h-2 rounded-full bg-slate-100">
-          <div className="h-2 rounded-full bg-emerald-500 transition-all" style={{ width: `${percent}%` }} />
-        </div>
+        <span className="text-[13px] font-semibold text-ok tabular-nums">{percent}%</span>
       </div>
-      {error && <p className="mb-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
+      {error && <Alert className="mb-3">{error}</Alert>}
       {blocks.map((block, i) =>
         block.kind === 'text' ? (
-          <Markdown key={`t${i}`}>{block.text}</Markdown>
+          <Markdown key={`t${i}`} className="my-2">
+            {block.text}
+          </Markdown>
         ) : (
-          <label key={`i${block.index}`} className="flex cursor-pointer items-start gap-2 py-1 text-sm">
+          <label
+            key={`i${block.index}`}
+            className="flex cursor-pointer items-start gap-3 rounded px-2 py-2 text-sm hover:bg-subtle"
+          >
             <input
               type="checkbox"
-              className="mt-0.5 h-4 w-4 accent-emerald-600"
+              className="mt-0.5 size-4 shrink-0 accent-brand"
               checked={done.includes(block.index)}
               onChange={() => toggle(block.index)}
             />
-            <span className={done.includes(block.index) ? 'text-slate-400 line-through' : ''}>{block.label}</span>
+            <span className={done.includes(block.index) ? 'text-faint line-through' : ''}>{block.label}</span>
           </label>
         ),
       )}

@@ -1,8 +1,12 @@
 import type { ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext'
+import Logo from './ui/Logo'
 
-export default function Layout({ children }: { children: ReactNode }) {
+/**
+ * App shell: navy header with the logo, the page's tabs (`nav`) and the signed-in user.
+ */
+export default function Layout({ nav, children }: { nav?: ReactNode; children: ReactNode }) {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
 
@@ -13,28 +17,30 @@ export default function Layout({ children }: { children: ReactNode }) {
 
   return (
     <div className="flex min-h-screen flex-col">
-      <header className="border-b border-slate-200 bg-white">
-        <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3">
-          <div className="flex items-center gap-2">
-            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-600 text-sm font-bold text-white">
-              Me
-            </span>
-            <span className="font-semibold">Onboarding Assistant</span>
-          </div>
+      <header className="bg-navy text-white">
+        <div className="flex flex-wrap items-center gap-x-7 px-4 md:h-[52px] md:flex-nowrap md:px-6">
+          <span className="flex h-[52px] items-center gap-2.5 text-[15px] font-semibold">
+            <Logo onDark />
+            {user?.role === 'admin' ? 'Onboarding Admin' : 'Onboarding Assistant'}
+          </span>
+          {/* On phones the tabs drop to their own row under the logo. */}
+          <div className="order-last -mx-4 w-[calc(100%+2rem)] overflow-x-auto border-t border-white/10 md:border-0 md:order-none md:mx-0 md:w-auto">{nav}</div>
           {user && (
-            <div className="flex items-center gap-3 text-sm">
-              <span className="hidden text-slate-600 sm:inline">{user.name}</span>
-              <span className="rounded-full bg-indigo-50 px-2 py-0.5 text-xs font-medium text-indigo-700 capitalize">
-                {user.role}
+            <div className="ml-auto flex items-center gap-4">
+              <span className="hidden text-[13px] text-navy-muted sm:inline">
+                {user.name} · <span className="capitalize">{user.role}</span>
               </span>
-              <button onClick={handleLogout} className="rounded-md px-2 py-1 text-slate-600 hover:bg-slate-100">
+              <button
+                onClick={handleLogout}
+                className="rounded border border-white/30 px-3 py-1 text-[13px] hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-tab"
+              >
                 Log out
               </button>
             </div>
           )}
         </div>
       </header>
-      <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-6">{children}</main>
+      <main className="w-full flex-1 px-4 py-6 md:px-8">{children}</main>
     </div>
   )
 }

@@ -58,16 +58,42 @@ def test_follow_up_uses_standalone_question(monkeypatch, fakes):
     assert fakes["answer_questions"] == ["Can annual leave be carried over?"]
 
 
-@pytest.mark.parametrize("category", ["out_of_scope", "account_specific"])
-def test_declined_categories_skip_retrieval_and_llm_answer(monkeypatch, fakes, category):
-    set_category(monkeypatch, category)
+def test_account_specific_skips_retrieval_and_llm_answer(monkeypatch, fakes):
+    set_category(monkeypatch, "account_specific")
+
+    result = graph.run_chat("What's my leave balance?", role="employee", history=[])
+
+    assert result["category"] == "account_specific"
+    assert result["answer"] == graph.DECLINE_MESSAGES["account_specific"]
+    assert fakes["search_roles"] == []
+    assert fakes["answer_questions"] == []
+
+
+def test_out_of_scope_with_weak_matches_is_declined(monkeypatch, fakes):
+    set_category(monkeypatch, "out_of_scope", standalone="What's the weather?")
+    weak = {**LEAVE_CHUNK, "score": graph.settings.out_of_scope_rescue_score - 0.05}
+    monkeypatch.setattr(graph.vectorstore, "search", lambda query_vector, role, limit: [weak])
 
     result = graph.run_chat("What's the weather?", role="employee", history=[])
 
-    assert result["category"] == category
-    assert result["answer"] == graph.DECLINE_MESSAGES[category]
-    assert fakes["search_roles"] == []
+    assert result["category"] == "out_of_scope"
+    assert result["answer"] == graph.DECLINE_MESSAGES["out_of_scope"]
+    assert result["sources"] == []
     assert fakes["answer_questions"] == []
+
+
+def test_out_of_scope_with_strong_match_is_answered_from_relevant_chunks(monkeypatch, fakes):
+    set_category(monkeypatch, "out_of_scope", standalone="Tell me about the Bhaiyaa app")
+    threshold = graph.settings.out_of_scope_rescue_score
+    strong = {**LEAVE_CHUNK, "document_id": "doc-frd", "title": "FRD", "score": threshold + 0.03}
+    weak = {**LEAVE_CHUNK, "score": threshold - 0.05}
+    monkeypatch.setattr(graph.vectorstore, "search", lambda query_vector, role, limit: [strong, weak])
+
+    result = graph.run_chat("bhaiyaa app", role="employee", history=[])
+
+    assert result["category"] == "general_docs"
+    assert fakes["answer_questions"] == ["Tell me about the Bhaiyaa app"]
+    assert result["sources"] == [{"document_id": "doc-frd", "title": "FRD"}]
 
 
 def test_no_accessible_chunks_returns_not_found_without_llm(monkeypatch, fakes):

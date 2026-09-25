@@ -2,7 +2,10 @@ import { useState, type ChangeEvent, type FormEvent } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
 import { errorMessage } from '../api/client'
 import { homePathFor, useAuth } from '../auth/AuthContext'
-import AuthCard, { Field } from './AuthCard'
+import Alert from '../components/ui/Alert'
+import Button from '../components/ui/Button'
+import { TextField as Field } from '../components/ui/form'
+import AuthCard from './AuthCard'
 
 export default function Register() {
   const { user, loading, register } = useAuth()
@@ -31,8 +34,19 @@ export default function Register() {
   }
 
   return (
-    <AuthCard title="Create your account" subtitle="New accounts start with the employee role">
-      <form onSubmit={handleSubmit} className="space-y-4">
+    <AuthCard
+      title="Create your account"
+      subtitle="New accounts start with the employee role."
+      footer={
+        <>
+          Already have an account?{' '}
+          <Link to="/login" className="font-semibold text-brand hover:underline">
+            Sign in
+          </Link>
+        </>
+      }
+    >
+      <form onSubmit={handleSubmit} className="space-y-[18px]">
         <Field label="Full name" required autoComplete="name" value={form.name} onChange={update('name')} />
         <Field label="Work email" type="email" required autoComplete="email" value={form.email} onChange={update('email')} />
         <Field
@@ -53,21 +67,11 @@ export default function Register() {
           value={form.password_confirmation}
           onChange={update('password_confirmation')}
         />
-        {error && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
-        <button
-          type="submit"
-          disabled={submitting}
-          className="w-full rounded-lg bg-indigo-600 py-2 font-medium text-white hover:bg-indigo-700 disabled:opacity-60"
-        >
+        {error && <Alert>{error}</Alert>}
+        <Button type="submit" size="lg" disabled={submitting} className="w-full">
           {submitting ? 'Creating account…' : 'Create account'}
-        </button>
+        </Button>
       </form>
-      <p className="mt-6 text-center text-sm text-slate-500">
-        Already have an account?{' '}
-        <Link to="/login" className="font-medium text-indigo-600 hover:underline">
-          Sign in
-        </Link>
-      </p>
     </AuthCard>
   )
 }
