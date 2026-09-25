@@ -5,19 +5,23 @@ Builds the three production images (web, api, ai) and, with -Push, pushes them t
 .DESCRIPTION
 Images are tagged <Registry>/<Repository>:<name>-<Tag>, e.g. ...dhi_tech_forum:api-3f2a1bc.
 The tag defaults to the current git commit, so every pushed image maps to exact code.
-Pushing needs the AWS CLI configured with ECR push access (`aws configure`).
+Pushing needs ECR push access: the AWS CLI configured (`aws configure`), or, without the CLI,
+a -AwsEnvFile with the keys (the CLI then runs from the amazon/aws-cli Docker image).
 
 .EXAMPLE
 ./deploy/build-and-push.ps1                 # build only, to test locally
 ./deploy/build-and-push.ps1 -Push           # build and push to ECR
 ./deploy/build-and-push.ps1 -Push -Platform linux/arm64   # for an ARM (Graviton) server
+./deploy/build-and-push.ps1 -Push -AwsEnvFile C:\secrets\aws.env   # no AWS CLI installed
 #>
 param(
     [string]$Registry = '464092293482.dkr.ecr.ap-south-1.amazonaws.com',
     [string]$Repository = 'dhi_tech_forum',
     [string]$Tag = '',
     [string]$Platform = 'linux/amd64',
-    [switch]$Push
+    [switch]$Push,
+    # File with AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY lines, for machines without the AWS CLI. Keep it outside the repo.
+    [string]$AwsEnvFile = ''
 )
 
 $ErrorActionPreference = 'Stop'
@@ -55,8 +59,14 @@ if ($Push) {
     $region = ($Registry -split '\.')[3]
     Write-Host "==> Logging in to $Registry" -ForegroundColor Cyan
     $ErrorActionPreference = 'Continue'
-    $password = aws ecr get-login-password --region $region
-    if ($LASTEXITCODE -ne 0) { throw 'AWS login failed. Run "aws configure" with the ECR credentials from DevOps.' }
+    if ($AwsEnvFile -or -not (Get-Command aws -ErrorAction SilentlyContinue)) {
+        # No AWS CLI installed: run it from its Docker image, with keys from -AwsEnvFile or the current environment.
+        $credentials = if ($AwsEnvFile) { @('--env-file', $AwsEnvFile) } else { @('-e', 'AWS_ACCESS_KEY_ID', '-e', 'AWS_SECRET_ACCESS_KEY', '-e', 'AWS_SESSION_TOKEN') }
+        $password = docker run --rm @credentials amazon/aws-cli ecr get-login-password --region $region
+    } else {
+        $password = aws ecr get-login-password --region $region
+    }
+    if ($LASTEXITCODE -ne 0) { throw 'AWS login failed. Check the ECR credentials from DevOps (aws configure, or -AwsEnvFile).' }
     $password | docker login --username AWS --password-stdin $Registry 2>&1 | ForEach-Object { "$_" }
     if ($LASTEXITCODE -ne 0) { throw 'docker login to ECR failed.' }
     $ErrorActionPreference = 'Stop'

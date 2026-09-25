@@ -25,7 +25,7 @@ Internet ──HTTPS──> load balancer / Caddy / host nginx ──HTTP──>
 
 ## 1. Build and push the images (developer)
 
-Needs Docker and the AWS CLI configured with ECR push access (`aws configure`).
+Needs Docker and ECR push access: the AWS CLI configured (`aws configure`), or, without the CLI, `-AwsEnvFile <file>` pointing at a file (outside the repo) with `AWS_ACCESS_KEY_ID=` and `AWS_SECRET_ACCESS_KEY=` lines.
 
 ```powershell
 ./deploy/build-and-push.ps1 -Push                        # amd64 server
