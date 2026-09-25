@@ -66,4 +66,15 @@ class ChatTest extends TestCase
 
         $this->assertSame(1, Message::count());
     }
+
+    public function test_chat_is_rate_limited_per_user(): void
+    {
+        config(['services.ai.chat_per_minute' => 2]);
+        $this->fakeAi();
+        $this->actingAsRole('employee');
+
+        $this->postJson('/api/chat', ['message' => 'One'])->assertOk();
+        $this->postJson('/api/chat', ['message' => 'Two'])->assertOk();
+        $this->postJson('/api/chat', ['message' => 'Three'])->assertTooManyRequests();
+    }
 }

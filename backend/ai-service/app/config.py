@@ -6,7 +6,8 @@ class Settings(BaseSettings):
 
     # The Anthropic SDK reads ANTHROPIC_API_KEY from the environment itself.
     anthropic_model: str = "claude-haiku-4-5"
-    ai_internal_key: str = "change-me"
+    # Shared secret Laravel sends as X-Internal-Key. The service refuses to start while it is weak (see main.py).
+    ai_internal_key: str = ""
 
     mongodb_uri: str = "mongodb://localhost:27017/?directConnection=true"
     mongodb_db: str = "onboarding_assistant"

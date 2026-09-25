@@ -18,9 +18,20 @@ from app.llm import LLMUnavailable
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+MIN_INTERNAL_KEY_LENGTH = 16
+
+
+def check_internal_key(key: str) -> None:
+    """An empty or placeholder key would let anyone call the service with any role, so refuse to start."""
+    if len(key) < MIN_INTERNAL_KEY_LENGTH or key.startswith("change-me"):
+        raise RuntimeError(
+            f"AI_INTERNAL_KEY must be a random string of at least {MIN_INTERNAL_KEY_LENGTH} characters."
+        )
+
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
+    check_internal_key(settings.ai_internal_key)
     try:
         vectorstore.ensure_indexes()
     except Exception:  # Mongo may still be starting; ingest calls ensure_indexes again
@@ -60,11 +71,7 @@ class ChatResponse(BaseModel):
 
 @app.get("/health")
 def health() -> dict:
-    return {
-        "status": "ok",
-        "model": settings.anthropic_model,
-        "anthropic_key_configured": bool(os.environ.get("ANTHROPIC_API_KEY")),
-    }
+    return {"status": "ok", "anthropic_key_configured": bool(os.environ.get("ANTHROPIC_API_KEY"))}
 
 
 @app.post("/ingest", dependencies=[Depends(require_internal_key)])

@@ -3,19 +3,23 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use Closure;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
 {
     public function register(Request $request): JsonResponse
     {
+        abort_unless(config('registration.enabled'), 403, 'Sign-up is closed. Ask an admin to create your account.');
+
         $data = $request->validate([
             'name' => ['required', 'string', 'max:100'],
-            'email' => ['required', 'email', 'max:255', 'unique:users,email'],
+            'email' => ['required', 'email', 'max:255', 'unique:users,email', $this->allowedDomainRule()],
             'password' => ['required', 'string', 'min:8', 'confirmed'],
         ]);
 
@@ -63,5 +67,17 @@ class AuthController extends Controller
     public function me(Request $request): JsonResponse
     {
         return response()->json(['user' => $request->user()]);
+    }
+
+    private function allowedDomainRule(): Closure
+    {
+        return function (string $attribute, mixed $value, Closure $fail) {
+            $domains = config('registration.allowed_domains');
+            $domain = strtolower((string) Str::after((string) $value, '@'));
+
+            if ($domains !== [] && ! in_array($domain, $domains, true)) {
+                $fail('Sign-up is limited to company email addresses.');
+            }
+        };
     }
 }

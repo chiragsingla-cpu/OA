@@ -31,7 +31,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('checklists/{document}/progress', [ChecklistController::class, 'update']);
 
     // Assistant chat.
-    Route::post('chat', [ChatController::class, 'store']);
+    Route::post('chat', [ChatController::class, 'store'])->middleware('throttle:chat');
     Route::get('conversations', [ChatController::class, 'conversations']);
     Route::get('conversations/{conversationId}/messages', [ChatController::class, 'messages']);
 

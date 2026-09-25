@@ -15,6 +15,9 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware) {
+        // In production the API is only reachable through the reverse proxy, so trust its
+        // X-Forwarded-* headers for client IPs (rate limits) and HTTPS detection.
+        $middleware->trustProxies(at: '*');
         $middleware->api(prepend: [ForceJsonResponse::class]);
         $middleware->alias(['role' => EnsureRole::class]);
     })
