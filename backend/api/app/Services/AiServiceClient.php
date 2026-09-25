@@ -39,7 +39,7 @@ class AiServiceClient
      *
      * @return array{document_id: string, chunks: int, text: string}
      */
-    public function ingest(Document $document, ?string $filePath = null): array
+    public function ingest(Document $document, ?string $fileContents = null): array
     {
         $request = $this->http()->timeout($this->ingestTimeout)->asMultipart();
 
@@ -50,12 +50,8 @@ class AiServiceClient
             'allowed_roles' => implode(',', $document->allowed_roles ?? []),
         ];
 
-        if ($filePath !== null) {
-            $request = $request->attach(
-                'file',
-                file_get_contents($filePath),
-                $document->original_filename ?? basename($filePath),
-            );
+        if ($fileContents !== null) {
+            $request = $request->attach('file', $fileContents, $document->original_filename ?? basename($document->stored_path));
         } else {
             $fields['text'] = (string) $document->body_text;
         }

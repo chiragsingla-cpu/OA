@@ -25,6 +25,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // Onboarding content (filtered by role inside the controller).
     Route::get('documents', [DocumentController::class, 'index']);
     Route::get('documents/{document}', [DocumentController::class, 'show']);
+    Route::get('documents/{document}/file', [DocumentController::class, 'file']);
 
     // The signed-in user's own checklist progress.
     Route::get('checklists/{document}/progress', [ChecklistController::class, 'show']);

@@ -7,6 +7,7 @@ import Alert from '../ui/Alert'
 import Button from '../ui/Button'
 import { muted, panel } from '../ui/styles'
 import Checklist from './Checklist'
+import OriginalFileViewer from './OriginalFileViewer'
 
 /**
  * Shows a document. Without `onAsk` it is a read-only preview (used by admins): no "Ask" button,
@@ -21,11 +22,13 @@ export default function DocumentReader({
 }) {
   const [document, setDocument] = useState<DocumentItem | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [view, setView] = useState<'text' | 'file'>('text')
 
   useEffect(() => {
     let cancelled = false
     setDocument(null)
     setError(null)
+    setView('text')
     api
       .get<{ document: DocumentItem }>(`/documents/${documentId}`)
       .then(({ data }) => !cancelled && setDocument(data.document))
@@ -61,7 +64,24 @@ export default function DocumentReader({
           </Button>
         )}
       </div>
-      {document.category === 'checklist' && !preview ? (
+      {document.has_file && (
+        <div className="mb-4 inline-flex gap-1 rounded border border-line bg-subtle p-1" role="group" aria-label="Document view">
+          {(['text', 'file'] as const).map((option) => (
+            <Button
+              key={option}
+              size="sm"
+              variant={view === option ? 'primary' : 'secondary'}
+              aria-pressed={view === option}
+              onClick={() => setView(option)}
+            >
+              {option === 'text' ? 'Text' : 'Original file'}
+            </Button>
+          ))}
+        </div>
+      )}
+      {view === 'file' && document.has_file ? (
+        <OriginalFileViewer document={document} />
+      ) : document.category === 'checklist' && !preview ? (
         <Checklist documentId={document.id} markdown={body} />
       ) : (
         <Markdown>{body || '_This document has no text content yet._'}</Markdown>

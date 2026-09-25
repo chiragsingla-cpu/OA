@@ -38,6 +38,14 @@ class Document extends Model
 
     protected $hidden = ['stored_path'];
 
+    // Tells the frontend whether an original file can be viewed, without exposing where it is stored.
+    protected $appends = ['has_file'];
+
+    public function getHasFileAttribute(): bool
+    {
+        return ! empty($this->stored_path);
+    }
+
     public function isVisibleTo(User $user): bool
     {
         return $user->isAdmin() || in_array($user->role, $this->allowed_roles ?? [], true);

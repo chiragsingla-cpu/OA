@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Document;
+use Illuminate\Filesystem\FilesystemAdapter;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 
@@ -25,12 +26,12 @@ class DocumentIndexer
             $this->storeUpload($document, $upload);
         }
 
-        $filePath = $document->stored_path && Storage::disk('local')->exists($document->stored_path)
-            ? Storage::disk('local')->path($document->stored_path)
+        $fileContents = $document->stored_path && $this->disk()->exists($document->stored_path)
+            ? $this->disk()->get($document->stored_path)
             : null;
 
         try {
-            $result = $this->ai->ingest($document, $filePath);
+            $result = $this->ai->ingest($document, $fileContents);
 
             $document->fill([
                 'status' => Document::STATUS_INDEXED,
@@ -38,7 +39,7 @@ class DocumentIndexer
                 'error' => null,
             ]);
 
-            if ($filePath !== null) {
+            if ($fileContents !== null) {
                 // Keep the extracted text so the onboarding view can display uploaded files.
                 $document->body_text = $result['text'] ?? '';
             }
@@ -57,20 +58,25 @@ class DocumentIndexer
         $this->ai->deleteDocument((string) $document->id);
 
         if ($document->stored_path) {
-            Storage::disk('local')->delete($document->stored_path);
+            $this->disk()->delete($document->stored_path);
         }
+    }
+
+    public static function disk(): FilesystemAdapter
+    {
+        return Storage::disk(config('documents.disk'));
     }
 
     private function storeUpload(Document $document, UploadedFile $upload): void
     {
         if ($document->stored_path) {
-            Storage::disk('local')->delete($document->stored_path);
+            $this->disk()->delete($document->stored_path);
         }
 
         $extension = strtolower($upload->getClientOriginalExtension());
 
         $document->original_filename = $upload->getClientOriginalName();
-        $document->stored_path = $upload->storeAs('documents', $document->id.'.'.$extension, 'local');
+        $document->stored_path = $upload->storeAs('documents', $document->id.'.'.$extension, config('documents.disk'));
         $document->save();
     }
 }

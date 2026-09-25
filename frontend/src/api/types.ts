@@ -22,6 +22,8 @@ export interface DocumentItem {
   category: DocumentCategory
   body_text?: string | null
   original_filename?: string | null
+  /** True when an uploaded original file can be viewed at /documents/{id}/file. */
+  has_file?: boolean
   allowed_roles: Role[]
   status: DocumentStatus
   chunk_count?: number

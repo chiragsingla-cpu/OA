@@ -10,9 +10,17 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Validation\Rule;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class DocumentController extends Controller
 {
+    private const FILE_TYPES = [
+        'pdf' => 'application/pdf',
+        'docx' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'txt' => 'text/plain; charset=utf-8',
+        'md' => 'text/markdown; charset=utf-8',
+    ];
+
     public function __construct(private readonly DocumentIndexer $indexer)
     {
     }
@@ -34,6 +42,24 @@ class DocumentController extends Controller
         abort_unless($document->isVisibleTo($request->user()), 404);
 
         return response()->json(['document' => $document]);
+    }
+
+    /**
+     * Streams the original uploaded file through the API, so the storage bucket stays private.
+     */
+    public function file(Request $request, Document $document): StreamedResponse
+    {
+        abort_unless($document->isVisibleTo($request->user()), 404);
+
+        $disk = DocumentIndexer::disk();
+        abort_unless($document->stored_path && $disk->exists($document->stored_path), 404);
+
+        $extension = strtolower(pathinfo($document->stored_path, PATHINFO_EXTENSION));
+
+        return $disk->response($document->stored_path, $document->original_filename, [
+            'Content-Type' => self::FILE_TYPES[$extension] ?? 'application/octet-stream',
+            'X-Content-Type-Options' => 'nosniff',
+        ], 'inline');
     }
 
     public function store(Request $request): JsonResponse
