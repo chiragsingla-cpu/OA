@@ -1,0 +1,85 @@
+# Production stack. Settings come from .env next to this file (copy .env.production.example).
+#   Build images locally:   docker compose -f docker-compose.prod.yml build
+#   Run on the server:      docker compose -f docker-compose.prod.yml pull && docker compose -f docker-compose.prod.yml up -d
+# Only the web container is published. Put HTTPS (load balancer, Caddy or host nginx) in front of WEB_PORT.
+# Self-hosted MongoDB instead of MongoDB Atlas: add --profile local-mongo (see .env.production.example).
+
+x-restart: &restart
+  restart: unless-stopped
+
+services:
+  web:
+    <<: *restart
+    image: ${WEB_IMAGE:?set WEB_IMAGE in .env}
+    build:
+      context: ./frontend
+      target: prod
+    ports:
+      - "${WEB_PORT:-80}:80"
+    depends_on:
+      - api
+
+  api:
+    <<: *restart
+    image: ${API_IMAGE:?set API_IMAGE in .env}
+    build:
+      context: ./backend
+      dockerfile: api/Dockerfile.prod
+    environment:
+      APP_NAME: Onboarding Assistant
+      APP_KEY: ${APP_KEY:?set APP_KEY in .env}
+      APP_URL: ${APP_URL:?set APP_URL in .env}
+      FRONTEND_URL: ${APP_URL}
+      MONGODB_URI: ${MONGODB_URI:?set MONGODB_URI in .env}
+      MONGODB_DB: ${MONGODB_DB:-onboarding_assistant}
+      AI_SERVICE_URL: http://ai:8001
+      AI_INTERNAL_KEY: ${AI_INTERNAL_KEY:?set AI_INTERNAL_KEY in .env}
+      DOCUMENTS_DISK: ${DOCUMENTS_DISK:-s3}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
+      AWS_DEFAULT_REGION: ${AWS_DEFAULT_REGION:-ap-south-1}
+      AWS_BUCKET: ${AWS_BUCKET:-}
+      REGISTRATION_ENABLED: ${REGISTRATION_ENABLED:-true}
+      REGISTRATION_ALLOWED_DOMAINS: ${REGISTRATION_ALLOWED_DOMAINS:-}
+      CHAT_RATE_LIMIT_PER_MINUTE: ${CHAT_RATE_LIMIT_PER_MINUTE:-20}
+      SANCTUM_TOKEN_EXPIRATION: ${SANCTUM_TOKEN_EXPIRATION:-10080}
+    volumes:
+      # Only used when DOCUMENTS_DISK=local; with S3 the files live in the bucket.
+      - api_storage:/var/www/html/storage/app
+    depends_on:
+      ai:
+        condition: service_started
+      mongo: &wait-for-local-mongo
+        condition: service_healthy
+        required: false # ignored when MongoDB Atlas is used instead of --profile local-mongo
+
+  ai:
+    <<: *restart
+    image: ${AI_IMAGE:?set AI_IMAGE in .env}
+    build: ./backend/ai-service
+    depends_on:
+      mongo: *wait-for-local-mongo
+    environment:
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:?set ANTHROPIC_API_KEY in .env}
+      ANTHROPIC_MODEL: ${ANTHROPIC_MODEL:-claude-haiku-4-5}
+      AI_INTERNAL_KEY: ${AI_INTERNAL_KEY}
+      MONGODB_URI: ${MONGODB_URI}
+      MONGODB_DB: ${MONGODB_DB:-onboarding_assistant}
+
+  mongo:
+    <<: *restart
+    profiles: [local-mongo]
+    # Atlas Local adds $vectorSearch to MongoDB; a plain mongo image cannot run the assistant's search.
+    image: mongodb/mongodb-atlas-local:8.3
+    hostname: mongo
+    environment:
+      MONGODB_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USERNAME:-admin}
+      MONGODB_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD:-}
+    volumes:
+      - mongo_data:/data/db
+      - mongo_config:/data/configdb
+
+volumes:
+  api_storage:
+  mongo_data:
+  mongo_config:

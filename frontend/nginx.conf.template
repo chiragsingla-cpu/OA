@@ -1,0 +1,50 @@
+# Public entry point: serves the React app and forwards /api to the Laravel php-fpm container.
+# ${API_UPSTREAM} (host:port of php-fpm) is filled in by the nginx image at start; default api:9000.
+server {
+    listen 80;
+    server_tokens off;
+    root /usr/share/nginx/html;
+    index index.html;
+
+    # Uploads are capped at 10 MB by the API.
+    client_max_body_size 12m;
+
+    gzip on;
+    gzip_types text/css application/javascript application/json image/svg+xml;
+
+    add_header X-Content-Type-Options nosniff always;
+    add_header X-Frame-Options SAMEORIGIN always;
+    add_header Referrer-Policy strict-origin-when-cross-origin always;
+
+    location /api/ {
+        include fastcgi_params;
+        fastcgi_param SCRIPT_FILENAME /var/www/html/public/index.php;
+        fastcgi_param DOCUMENT_ROOT /var/www/html/public;
+        fastcgi_pass ${API_UPSTREAM};
+        # A chat answer can take over a minute.
+        fastcgi_read_timeout 200s;
+    }
+
+    # Laravel health check (also used by this container's HEALTHCHECK).
+    location = /up {
+        include fastcgi_params;
+        fastcgi_param SCRIPT_FILENAME /var/www/html/public/index.php;
+        fastcgi_pass ${API_UPSTREAM};
+    }
+
+    # Hashed build assets never change, so browsers can cache them for a year.
+    location /assets/ {
+        add_header Cache-Control "public, max-age=31536000, immutable";
+        add_header X-Content-Type-Options nosniff always;
+        try_files $uri =404;
+    }
+
+    # Single-page app: unknown paths fall back to index.html for client-side routing.
+    location / {
+        add_header Cache-Control "no-cache";
+        add_header X-Content-Type-Options nosniff always;
+        add_header X-Frame-Options SAMEORIGIN always;
+        add_header Referrer-Policy strict-origin-when-cross-origin always;
+        try_files $uri $uri/ /index.html;
+    }
+}

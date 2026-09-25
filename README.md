@@ -47,7 +47,7 @@ Open http://localhost:5173.
 | admin@example.com | password | Admin dashboard, all documents (including "HR Internal: Salary Bands") |
 | employee@example.com | password | Onboarding view + assistant, employee documents only |
 
-> The first document indexing downloads the embedding model (~130 MB) into a Docker volume, so it takes longer.
+> The embedding model (~130 MB) is downloaded once while the AI service image builds, so the first `--build` takes longer.
 > Don't run `migrate:fresh`: it drops every collection, including the AI service's vector chunks. If you do, run `app:seed-docs` again.
 
 ## Try it
@@ -70,7 +70,7 @@ Laravel tests use a separate `onboarding_assistant_test` database, which is wipe
 |---|---|
 | `ANTHROPIC_API_KEY` | Claude API key (used only by the AI service) |
 | `ANTHROPIC_MODEL` | Default `claude-haiku-4-5` ($1 / $5 per 1M input/output tokens). Change without code edits |
-| `AI_INTERNAL_KEY` | Shared secret: Laravel → AI service (`X-Internal-Key` header) |
+| `AI_INTERNAL_KEY` | Shared secret: Laravel → AI service (`X-Internal-Key` header). At least 16 random characters, or the AI service won't start |
 | `MONGODB_DB` | Database name |
 
 Cost controls: top-4 chunks per question, 6-message history, `max_tokens` 1024 for answers, and no LLM call for out-of-scope or personal questions. Embeddings run locally, so they are free.
@@ -80,18 +80,15 @@ Cost controls: top-4 chunks per question, 6-message history, `max_tokens` 1024 f
 |---|---|
 | `POST auth/register`, `POST auth/login` | public (register always creates an `employee`) |
 | `POST auth/logout`, `GET auth/me` | signed in |
-| `GET documents`, `GET documents/{id}` | signed in (filtered by role) |
-| `POST chat`, `GET conversations`, `GET conversations/{id}/messages` | signed in (own conversations only) |
+| `GET documents`, `GET documents/{id}`, `GET documents/{id}/file` (original upload) | signed in (filtered by role) |
+| `POST chat` (rate-limited per user), `GET conversations`, `GET conversations/{id}/messages` | signed in (own conversations only) |
 | `GET checklists/{id}/progress`, `PUT checklists/{id}/progress` | signed in (own checklist progress) |
 | `POST documents`, `PUT documents/{id}`, `DELETE documents/{id}`, `POST documents/{id}/reindex` | admin |
 | `GET/POST admin/users`, `PUT/DELETE admin/users/{id}` | admin (cannot delete or demote themselves) |
 | `GET admin/onboarding-progress`, `GET admin/analytics` | admin |
 
-## Deploying later
-- **Frontend**: `docker build --target prod --build-arg VITE_API_URL=https://api.yourco.com/api ./frontend`, or upload `dist/` to any static host.
-- **API**: swap `php artisan serve` for nginx + php-fpm, and set `FRONTEND_URL` (CORS), `MONGODB_URI` and `AI_SERVICE_URL`.
-- **AI service**: keep it on a private network. Only the API should reach it.
-- **MongoDB**: MongoDB Atlas (vector search built in) works with the same code. Just change `MONGODB_URI`.
+## Deploying
+Production uses three images (web = nginx + React app, api = Laravel php-fpm, ai = FastAPI), built and pushed with `deploy/build-and-push.ps1` and run with `docker-compose.prod.yml`. See **[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)** for the full guide.
 
 ## Next steps (phase 4)
-Streaming answers, more roles (`hr`, `new_joiner`), answer feedback (👍/👎), prompt caching once prompts pass 4096 tokens (Haiku's minimum), and a production web server.
+Streaming answers, more roles (`hr`, `new_joiner`), answer feedback (👍/👎), and prompt caching once prompts pass 4096 tokens (Haiku's minimum).

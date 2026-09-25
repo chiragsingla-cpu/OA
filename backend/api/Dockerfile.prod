@@ -1,0 +1,43 @@
+# Production image: php-fpm on port 9000. The web image's nginx forwards /api requests here.
+# Build context is backend/ (so the sample docs are included):
+#   docker build -f backend/api/Dockerfile.prod backend
+FROM php:8.3-fpm
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends unzip libssl-dev libcurl4-openssl-dev pkg-config \
+    && pecl install mongodb-2.5.2 \
+    && docker-php-ext-enable mongodb \
+    && docker-php-ext-install opcache \
+    && rm -rf /var/lib/apt/lists/* /tmp/pear
+
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
+COPY api/docker/php.ini /usr/local/etc/php/conf.d/zz-app.ini
+COPY api/docker/php-fpm.conf /usr/local/etc/php-fpm.d/zz-app.conf
+COPY api/docker/entrypoint.prod.sh /usr/local/bin/entrypoint
+RUN sed -i 's/\r$//' /usr/local/bin/entrypoint && chmod +x /usr/local/bin/entrypoint
+
+WORKDIR /var/www/html
+
+# Dependencies first, so code changes don't reinstall them.
+COPY api/composer.json api/composer.lock ./
+RUN composer install --no-dev --no-interaction --prefer-dist --no-scripts --no-autoloader
+
+COPY api/ ./
+COPY sample-docs /var/www/sample-docs
+RUN composer dump-autoload --optimize --no-dev \
+    && mkdir -p storage/app/private storage/framework/cache/data storage/framework/sessions storage/framework/views storage/logs bootstrap/cache \
+    && chown -R www-data:www-data storage bootstrap/cache
+
+ENV APP_ENV=production \
+    APP_DEBUG=false \
+    LOG_CHANNEL=stderr \
+    LOG_LEVEL=warning \
+    DB_CONNECTION=mongodb \
+    SESSION_DRIVER=file \
+    CACHE_STORE=file \
+    QUEUE_CONNECTION=sync \
+    SAMPLE_DOCS_PATH=/var/www/sample-docs
+
+EXPOSE 9000
+ENTRYPOINT ["entrypoint"]
+CMD ["php-fpm"]

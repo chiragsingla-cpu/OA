@@ -1,0 +1,10 @@
+# Build context is backend/; only api/ and sample-docs/ are needed.
+ai-service
+api/vendor
+api/.env
+api/.env.*
+!api/.env.example
+api/storage
+api/bootstrap/cache/*.php
+api/tests
+api/.phpunit*

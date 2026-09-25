@@ -1,21 +1,23 @@
-# dev: Vite dev server (used by docker-compose)
+# dev: Vite dev server (used by docker-compose.yml)
 FROM node:20-alpine AS dev
 WORKDIR /app
-COPY package*.json ./
-RUN npm install
+COPY package.json package-lock.json ./
+RUN npm ci
 COPY . .
 EXPOSE 5173
 CMD ["npm", "run", "dev", "--", "--host"]
 
-# build: static production bundle. Pass the public API URL at build time:
-#   docker build --target prod --build-arg VITE_API_URL=https://api.example.com/api .
+# build: static production bundle. The API URL is baked in at build time; the default "/api"
+# works when nginx below serves the app and the API on the same domain.
 FROM dev AS build
-ARG VITE_API_URL
+ARG VITE_API_URL=/api
 ENV VITE_API_URL=$VITE_API_URL
 RUN npm run build
 
-# prod: serve the static files with nginx (or upload dist/ to any static host)
+# prod: nginx serves the app and forwards /api to the API container (see nginx.conf.template)
 FROM nginx:1.27-alpine AS prod
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+ENV API_UPSTREAM=api:9000
+COPY nginx.conf.template /etc/nginx/templates/default.conf.template
 COPY --from=build /app/dist /usr/share/nginx/html
 EXPOSE 80
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s CMD wget -qO- http://127.0.0.1/up >/dev/null || exit 1
