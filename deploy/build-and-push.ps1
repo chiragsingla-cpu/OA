@@ -58,18 +58,15 @@ foreach ($image in $images) {
 if ($Push) {
     $region = ($Registry -split '\.')[3]
     Write-Host "==> Logging in to $Registry" -ForegroundColor Cyan
-    $ErrorActionPreference = 'Continue'
     if ($AwsEnvFile -or -not (Get-Command aws -ErrorAction SilentlyContinue)) {
         # No AWS CLI installed: run it from its Docker image, with keys from -AwsEnvFile or the current environment.
-        $credentials = if ($AwsEnvFile) { @('--env-file', $AwsEnvFile) } else { @('-e', 'AWS_ACCESS_KEY_ID', '-e', 'AWS_SECRET_ACCESS_KEY', '-e', 'AWS_SESSION_TOKEN') }
-        $password = docker run --rm @credentials amazon/aws-cli ecr get-login-password --region $region
+        $credentials = if ($AwsEnvFile) { "--env-file `"$AwsEnvFile`"" } else { '-e AWS_ACCESS_KEY_ID -e AWS_SECRET_ACCESS_KEY -e AWS_SESSION_TOKEN' }
+        $getPassword = "docker run --rm $credentials amazon/aws-cli ecr get-login-password --region $region"
     } else {
-        $password = aws ecr get-login-password --region $region
+        $getPassword = "aws ecr get-login-password --region $region"
     }
-    if ($LASTEXITCODE -ne 0) { throw 'AWS login failed. Check the ECR credentials from DevOps (aws configure, or -AwsEnvFile).' }
-    $password | docker login --username AWS --password-stdin $Registry 2>&1 | ForEach-Object { "$_" }
-    if ($LASTEXITCODE -ne 0) { throw 'docker login to ECR failed.' }
-    $ErrorActionPreference = 'Stop'
+    # Pipe through cmd: a Windows PowerShell pipe alters the token and ECR answers "400 Bad Request".
+    Invoke-Checked 'cmd' @('/c', "$getPassword | docker login --username AWS --password-stdin $Registry")
 
     foreach ($image in $images) {
         Write-Host "==> Pushing $($refs[$image.Name])" -ForegroundColor Cyan
